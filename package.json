@@ -1,12 +1,13 @@
 {
-  "name": "dynamic-business-os",
+  "name": "operon",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check": "npm run lint && npm run build"
   },
   "dependencies": {
     "clsx": "^2.1.1",

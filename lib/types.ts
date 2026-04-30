@@ -1,145 +1,121 @@
 export type Persona = "operator" | "cfo" | "cpto";
 
-export type InterpreterOutput = {
+export type RunMode = "generate" | "today" | "rewrite";
+
+export type EntityType = "partner" | "customer" | "initiative";
+
+export type RiskLevel = "low" | "medium" | "high";
+
+export type DecisionUrgency = "today" | "this_week" | "later";
+
+export type CompanyProfile = {
   role: string;
-  sector: string;
-  operatingStyle: string;
-  goals: string[];
-  metrics: string[];
-  entities: string[];
-  constraints: string[];
-  opportunities: string[];
+  businessGoal: string;
+  northStarMetric: string;
 };
 
-export type BusinessPriority = {
-  label: string;
-  rationale: string;
-  weight: number;
-};
-
-export type DecisionRule = {
+export type BusinessEntity = {
   name: string;
-  description: string;
-  formula: string;
-};
-
-export type OptimizerOutput = {
-  priorities: BusinessPriority[];
-  decision_logic: string;
-  ranking_function: string;
-  scoring_rules: DecisionRule[];
-  scenario_bias: {
-    growth: number;
-    margin: number;
-    risk: number;
-    velocity: number;
-  };
-};
-
-export type UIComponent =
-  | {
-      type: "hero";
-      title: string;
-      subtitle: string;
-      kicker: string;
-    }
-  | {
-      type: "metric_strip";
-      items: Array<{ label: string; value: string; tone?: "default" | "good" | "warn" | "danger" }>;
-    }
-  | {
-      type: "board";
-      title: string;
-      columns: Array<{ title: string; cards: string[] }>;
-    }
-  | {
-      type: "decision_list";
-      title: string;
-      items: Array<{ title: string; detail: string; emphasis?: "high" | "medium" | "low" }>;
-    }
-  | {
-      type: "table";
-      title: string;
-      columns: string[];
-      rows: string[][];
-    }
-  | {
-      type: "narrative";
-      title: string;
-      body: string;
-    };
-
-export type UIOutput = {
-  layout: "kanban" | "table" | "exec";
-  persona_modes: Record<
-    Persona,
-    {
-      headline: string;
-      stance: string;
-      components: UIComponent[];
-    }
-  >;
-};
-
-export type DealRecord = {
-  id: string;
-  account: string;
-  stage: string;
+  type: EntityType;
   value: number;
-  winProbability: number;
-  riskScore: number;
-  strategicFit: number;
+  stage: string;
+  risk: RiskLevel;
   blocker: string;
-  owner: string;
+  nextAction: string;
+  probability: number;
 };
 
-export type RiskRecord = {
-  name: string;
-  severity: "low" | "medium" | "high";
-  exposure: string;
-  action: string;
-};
-
-export type DecisionItem = {
+export type Decision = {
   title: string;
-  recommendation: string;
-  score: number;
-  ownerView: Persona | "shared";
-  linkedEntity: string;
+  why: string;
+  impact: string;
+  owner: string;
+  urgency: DecisionUrgency;
 };
 
-export type DecisionOutput = {
-  top_decisions: DecisionItem[];
-  impact: string[];
-  tradeoffs: string[];
-  scenario_summary: string;
+export type PersonaViewSection = {
+  title: string;
+  items: string[];
+};
+
+export type PersonaView = {
+  title: string;
+  summary: string;
+  sections: PersonaViewSection[];
 };
 
 export type AgentTrace = {
-  agent: "interpreter" | "optimizer" | "ui" | "decision";
-  promptSummary: string;
-  usedLiveLLM: boolean;
-  provider?: string;
-  model?: string;
-  output: unknown;
+  agent: string;
+  input: string;
+  outputSummary: string;
+  confidence: number;
 };
 
-export type SimulationMode = "baseline" | "upside" | "downside";
+export type BusinessSystemResponse = {
+  company: CompanyProfile;
+  impact: {
+    pipelineValue: number;
+    atRiskRevenue: number;
+    upsideToday: number;
+    confidence: number;
+  };
+  entities: BusinessEntity[];
+  decisions: Decision[];
+  personaView: PersonaView;
+  agentTrace: AgentTrace[];
+};
 
-export type BusinessOSResponse = {
+export type RunBusinessRequest = {
   prompt: string;
-  feedback?: string;
   persona: Persona;
-  simulationMode: SimulationMode;
-  rewriteApplied: boolean;
-  demoMode: boolean;
-  modelPlan: Record<"interpreter" | "optimizer" | "ui" | "decision", string>;
-  availableModels: string[];
-  interpreter: InterpreterOutput;
-  optimizer: OptimizerOutput;
-  ui: UIOutput;
-  decisions: DecisionOutput;
-  deals: DealRecord[];
-  risks: RiskRecord[];
-  trace: AgentTrace[];
+  mode: RunMode;
+  currentState?: Partial<BusinessSystemResponse> | null;
+};
+
+export type IntentOutput = CompanyProfile & {
+  constraints: string[];
+  personaAssumptions: string[];
+};
+
+export type DataModelOutput = {
+  entities: Array<{
+    name: string;
+    type: EntityType;
+    value: number;
+    probability: number;
+    risk: RiskLevel;
+  }>;
+  stages: string[];
+  metrics: string[];
+  relationships: string[];
+};
+
+export type WorkflowOutput = {
+  pipelineStages: string[];
+  workflowStates: string[];
+  entityUpdates: Array<{
+    name: string;
+    stage: string;
+    blocker: string;
+    nextAction: string;
+  }>;
+};
+
+export type ImpactOutput = BusinessSystemResponse["impact"] & {
+  before?: {
+    pipelineValue: number;
+    atRiskRevenue: number;
+    upsideToday: number;
+  };
+  after?: {
+    pipelineValue: number;
+    atRiskRevenue: number;
+    upsideToday: number;
+  };
+};
+
+export type AgentResult<T> = {
+  data: T;
+  trace: AgentTrace;
+  model: string;
 };

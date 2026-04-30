@@ -1,134 +1,170 @@
 # Operon
 
-Operon is software that rewrites itself to run your business.
+Software that runs your business.
 
-You give it business intent, not UI requirements. Operon interprets the goal, builds a business operating model, generates the interface that matches the outcome, and returns decisions instead of dashboards.
+Operon turns business intent into a working operating system. You describe the outcome you want. Operon generates the workflow, business impact, top decisions, and persona-specific views that help run the company.
 
-## What the demo shows
+## What it does
 
-The core demo flow is built around one founder-readable story:
+Give Operon a prompt like:
 
-1. The user describes a business:
-   - `I run partnerships at a fintech startup. Maximize revenue from partner deals, reduce renewal risk, and show me what to do today.`
-2. Operon generates a working business system.
-3. The user switches persona:
-   - Operator
-   - CFO
-   - CPTO
-4. The user gives feedback:
-   - `Prioritize what I should do today to maximize revenue.`
-5. Operon rewrites the system and simulates business impact.
+> I run partnerships at a fintech startup. Maximize revenue from partner deals, reduce renewal risk, and tell me what to do today.
 
-The product is intentionally framed as:
+Operon then:
 
-- Not a dashboard
-- Not a static admin template
-- Not a developer console
+1. Interprets the business goal
+2. Builds a business data model
+3. Generates a workflow
+4. Prioritizes decisions
+5. Calculates business impact
+6. Shapes the interface for Operator, CFO, and CPTO
 
-It is a generated operating system for a business.
+This is not a dashboard. It is software that rewrites itself around the outcome.
 
-## Product flow
+## Demo flow
 
-The app is designed as a guided YC demo:
+1. Enter a business prompt
+2. Click `Run my business`
+3. Review pipeline value, at-risk revenue, upside today, and top decisions
+4. Switch between `Operator`, `CFO`, and `CPTO`
+5. Click `What should I do today?`
+6. Watch Operon rerank the work and update the expected upside
 
-- `Step 1`: Describe business
-- `Step 2`: Generate system
-- `Step 3`: Switch persona
-- `Step 4`: Rewrite from feedback
-- `Step 5`: Simulate impact
+## Why it feels different
 
-The top of the product always leads with business impact:
+Most business software shows the same underlying data in slightly different views.
 
-- Pipeline value
-- At-risk revenue
-- Expected upside today
-- Decisions generated
+Operon starts with the decision. The interface is generated from the business goal, so the product changes when the goal changes.
 
-The agent proof is still there, but it is moved into a collapsible section:
+- `Operator` sees execution, blockers, and next actions
+- `CFO` sees revenue quality, exposure, and upside
+- `CPTO` sees tradeoffs, resource allocation, and what to stop doing
 
-- `Why Operon made this decision`
+## Architecture
 
-## Agent architecture
+Operon uses six separate agents plus one orchestrator.
 
-Operon keeps the real multi-agent flow intact.
-
-- `agents/interpreter.ts`
-  - Translates the business prompt into structured business intent.
-- `agents/optimizer.ts`
-  - Re-ranks priorities, scoring logic, and decision pressure.
-- `agents/ui.ts`
-  - Produces persona-aware UI structure for Operator, CFO, and CPTO.
-- `agents/decision.ts`
-  - Generates executive decisions, business impact, and tradeoffs.
-
-The orchestrator lives in `api/runAgents.ts` and sequences the loop. It does not replace the agents.
-
-## How the agents work
-
-Each agent makes its own independent OpenAI `responses` API call.
-
-Flow:
-
-1. `Interpreter` reads the business intent.
-2. `Optimizer` converts intent into priorities and ranking logic.
-3. `UI Generator` shapes the interface around the outcome.
-4. `Decision Engine` generates the actions, tradeoffs, and impact.
-
-If `OPENAI_API_KEY` is available, Operon uses live OpenAI calls.
-
-If `OPENAI_API_KEY` is missing or a call fails, Operon falls back to deterministic demo logic and shows `Demo mode` in the product UI. This keeps the full demo flow working without breaking the experience.
-
-## Project structure
-
-```text
-app/
-  api/runAgents/route.ts
-  globals.css
-  layout.tsx
-  page.tsx
-components/
-  DynamicRenderer.tsx
-api/
-  runAgents.ts
-agents/
-  interpreter.ts
-  optimizer.ts
-  ui.ts
-  decision.ts
-lib/
-  demoData.ts
-  openai.ts
-  types.ts
+```mermaid
+flowchart LR
+    A["Business Prompt"] --> B["Intent Agent"]
+    B --> C["Data Model Agent"]
+    C --> D["Workflow Agent"]
+    D --> E["Decision Agent"]
+    E --> F["Impact Agent"]
+    F --> G["UI Agent"]
+    G --> H["Generated Business System"]
 ```
 
-## Run locally
+### Agents
 
-Install dependencies:
+- `agents/intentAgent.ts`
+  - extracts role, business goal, north-star metric, constraints, and assumptions
+- `agents/dataModelAgent.ts`
+  - generates business entities, stages, metrics, and relationships
+- `agents/workflowAgent.ts`
+  - maps entities into pipeline states, blockers, and next actions
+- `agents/decisionAgent.ts`
+  - prioritizes concrete business decisions with impact, owner, and urgency
+- `agents/impactAgent.ts`
+  - calculates pipeline value, at-risk revenue, upside today, and confidence
+- `agents/uiAgent.ts`
+  - shapes the persona-specific interface
+- `agents/orchestrator.ts`
+  - runs the full pipeline and returns one product-facing response
+
+Each agent has:
+
+- its own system prompt
+- its own OpenAI call when `OPENAI_API_KEY` is set
+- strict JSON output handling
+- deterministic fallback behavior if live generation is unavailable
+
+## API
+
+Endpoint:
+
+- `POST /api/run-business`
+
+Request:
+
+```json
+{
+  "prompt": "I run partnerships at a fintech startup. Maximize revenue from partner deals, reduce renewal risk, and tell me what to do today.",
+  "persona": "operator",
+  "mode": "generate",
+  "currentState": null
+}
+```
+
+Response:
+
+```json
+{
+  "company": {
+    "role": "Head of Partnerships",
+    "businessGoal": "Maximize partner revenue while reducing renewal risk.",
+    "northStarMetric": "Risk-adjusted partner revenue"
+  },
+  "impact": {
+    "pipelineValue": 3140000,
+    "atRiskRevenue": 810000,
+    "upsideToday": 420000,
+    "confidence": 0.78
+  },
+  "entities": [],
+  "decisions": [],
+  "personaView": {
+    "title": "Operator view",
+    "summary": "Optimized for revenue impact today.",
+    "sections": []
+  },
+  "agentTrace": []
+}
+```
+
+## Deterministic business logic
+
+Operon does not rely on language generation alone.
+
+- `expectedValue = value * probability`
+- `atRiskRevenue = sum(value where risk = high)`
+- `upsideToday = sum(expected value of today-priority decisions), capped realistically`
+
+If `OPENAI_API_KEY` is missing, the app silently falls back to deterministic outputs so the product still works end-to-end.
+
+## Stack
+
+- Next.js App Router
+- React
+- Tailwind CSS
+- OpenAI Responses API
+
+## Local development
 
 ```bash
 npm install
-```
-
-Start the app:
-
-```bash
 npm run dev
 ```
 
-Open:
+Open [http://localhost:3000](http://localhost:3000). If `3000` is busy, Next.js will use the next available port.
 
-```text
-http://localhost:3000
+## Checks
+
+```bash
+npm run check
 ```
 
-If port `3000` is busy, Next will move to the next available port.
+This runs:
+
+- TypeScript typecheck
+- production build verification
 
 ## Environment variables
 
 Required for live OpenAI calls:
 
 ```bash
-OPENAI_API_KEY=your_openai_key
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 Optional:
@@ -136,40 +172,35 @@ Optional:
 ```bash
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=gpt-4.1-mini
-OPENAI_INTERPRETER_MODEL=gpt-4.1-mini
-OPENAI_OPTIMIZER_MODEL=gpt-4.1-mini
-OPENAI_UI_MODEL=gpt-4.1-mini
-OPENAI_DECISION_MODEL=gpt-4.1-mini
 ```
-
-If no key is set, Operon runs in deterministic demo mode.
 
 ## Deploy to Vercel
 
-1. Push the repo to GitHub.
-2. Import the repo into Vercel.
-3. Set the environment variables in the Vercel project:
+1. Push the repo to GitHub
+2. Import it into Vercel
+3. Set:
    - `OPENAI_API_KEY`
    - optional `OPENAI_BASE_URL`
    - optional `OPENAI_MODEL`
-   - optional per-agent model overrides
-4. Deploy.
+4. Deploy
 
-Because the app uses the Next.js App Router and a server route for agent orchestration, it works cleanly on Vercel without extra infrastructure.
+The app runs as a standard Next.js project with one API route, so deployment is straightforward.
 
-## Acceptance checklist
+## Repo guide
 
-The current demo is designed to satisfy these product expectations:
+- `app/page.tsx`
+  - product shell, prompt entry, persona switching
+- `components/DynamicRenderer.tsx`
+  - business impact, decisions, persona views, reasoning drawer
+- `app/api/run-business/route.ts`
+  - public API entry point
+- `lib/openai.ts`
+  - OpenAI structured output wrapper with retry
+- `lib/demoData.ts`
+  - deterministic sample data and fallback calculations
+- `docs/demo-script.md`
+  - 60-second YC demo script
 
-- `npm run dev` works
-- The app loads as a polished product demo
-- One-click generation works
-- Persona switching changes the UI meaningfully
-- Rewrite-from-feedback changes priorities and decisions
-- Simulate impact shows before/after business value
-- Agent trace is preserved but not dominant
-- Demo mode works without live API access
+## One-line pitch
 
-## Operon in one line
-
-Same data. Different decisions.
+Operon turns business intent into software that runs the company.
