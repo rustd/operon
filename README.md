@@ -122,15 +122,7 @@ Response:
 }
 ```
 
-## Deterministic business logic
 
-Operon does not rely on language generation alone.
-
-- `expectedValue = value * probability`
-- `atRiskRevenue = sum(value where risk = high)`
-- `upsideToday = sum(expected value of today-priority decisions), capped realistically`
-
-If `OPENAI_API_KEY` is missing, the app silently falls back to deterministic outputs so the product still works end-to-end.
 
 ## Stack
 
